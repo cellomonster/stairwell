@@ -2,8 +2,8 @@
 
 precision highp float;
 
-uniform vec2[500] pos;
-uniform int num;
+uniform vec2[500] partPos;
+uniform int numParts;
 
 in vec2 texCoord;
 
@@ -12,12 +12,12 @@ out vec4 fragColor;
 void main(void) {
     fragColor = vec4(0, 1, 0, 1);
     float f = 0.;
-    for(int i = 0; i < num; i++)
+    for(int i = 0; i < numParts; i++)
     {
-        vec2 p = pos[i];
+        vec2 p = partPos[i];
 
-        float dx = texCoord.x - pos[i].x;
-        float dy = texCoord.y - pos[i].y;
+        float dx = texCoord.x - partPos[i].x;
+        float dy = texCoord.y - partPos[i].y;
 
         f += 50.0 * 50.0 / (dx * dx + dy * dy);
     }

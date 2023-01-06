@@ -7,103 +7,136 @@ const program = createProgram(getFile("tri.glsl"), getFile("metaballs.glsl"));
 gl.useProgram(program);
 
 // locations
-const locCanvWidth = gl.getUniformLocation(program, "canvWidth");
-const locCanvHeight = gl.getUniformLocation(program, "canvHeight");
+const idCanvWidth = gl.getUniformLocation(program, "canvWidth");
+const idCanvHeight = gl.getUniformLocation(program, "canvHeight");
 
-gl.uniform1f(locCanvWidth, canvas.width);
-gl.uniform1f(locCanvHeight, canvas.height);
+gl.uniform1f(idCanvWidth, canvas.width);
+gl.uniform1f(idCanvHeight, canvas.height);
 
-const locPos = gl.getUniformLocation(program, "pos");
-const locNum = gl.getUniformLocation(program, "num");
+const idPartPos = gl.getUniformLocation(program, "partPos");
+const idNumParts = gl.getUniformLocation(program, "numParts");
 
-gl.uniform1i(locNum, 0);
+gl.uniform1i(idNumParts, 0);
 
 /*** Ball object ***/
-const arrObjBalls = [];
+const fPartInitVel = 5;
 
-const initialVel = 5;
+const iPosVecSize = 2;
+let fv2aPositions = [];
+const iVelVecSize = 2;
+let fv2aVelocities = [];
+let faRadii = [];
 
-let fPositions = [];
+let iNumParts = 0;
 
-function ObjBall(objEmotion) {
-    this.fRadius = 50;
-    this.vPos = [Math.random() * canvas.width, Math.random() * canvas.height];
+function createParticle() {
 
+    iNumParts++;
+
+    gl.uniform1i(idNumParts, iNumParts);
+
+    // x
+    fv2aPositions.push(Math.random() * canvas.width);
+    // y
+    fv2aPositions.push(Math.random() * canvas.height);
+
+    // random initial direction
     const fRandRad = Math.random() * Math.PI * 2;
-    this.vVel = [Math.cos(fRandRad) * initialVel, Math.sin(fRandRad) * initialVel];
 
-    arrObjBalls.push(this);
-    fPositions.push(this.vPos[0]);
-    fPositions.push(this.vPos[1]);
-    console.log(fPositions.length / 2);
-    gl.uniform1i(locNum, fPositions.length / 2);
+    // x velocity
+    fv2aVelocities.push(Math.cos(fRandRad) * fPartInitVel);
+    // y vel
+    fv2aVelocities.push(Math.sin(fRandRad) * fPartInitVel);
 
-    this.update = function() {
-        // move
+    // radius
+    faRadii.push(50);
+}
 
-        JVec.vAdd(this.vPos, this.vVel);
-
-        if(this.vPos[0] < this.fRadius)
-            this.vVel[0] = Math.abs(this.vVel[0]);
-        else if (this.vPos[0] > canvas.width  - this.fRadius)
-            this.vVel[0] = -Math.abs(this.vVel[0]);
-
-        if(this.vPos[1] < this.fRadius)
-            this.vVel[1] = Math.abs(this.vVel[1]);
-        else if (this.vPos[1] > canvas.height  - this.fRadius)
-            this.vVel[1] = -Math.abs(this.vVel[1]);
-    };
+for(let i = 0; i < 30; i++) {
+    createParticle();
 }
 
 window.requestAnimationFrame(update);
 function update() {
 
-    for(let i = 0; i < arrObjBalls.length; i++) {
-        const objBall1 = arrObjBalls[i];
+    for(let indexA = 0; indexA < iNumParts; indexA++) {
 
-        objBall1.update();
+        let indexAPosX = indexA * iPosVecSize;
+        let indexAPosY = indexA * iPosVecSize + 1;
+        let indexAVelX = indexA * iVelVecSize;
+        let indexAVelY = indexA * iVelVecSize + 1;
 
-        fPositions[i * 2] = objBall1.vPos[0];
-        fPositions[i * 2 + 1] = objBall1.vPos[1];
+        fv2aPositions[indexAPosX] += fv2aVelocities[indexAVelX];
+        fv2aPositions[indexAPosY] += fv2aVelocities[indexAVelY];
 
-        for(let j = i + 1; j < arrObjBalls.length; j++) {
-            const objBall2 = arrObjBalls[j];
+        if(fv2aPositions[indexAPosX] < 0) {
+            fv2aVelocities[indexAPosX] = Math.abs(fv2aVelocities[indexAPosX]);
+        } else if (fv2aPositions[indexAPosX] > canvas.width) {
+            fv2aVelocities[indexAPosX] = -Math.abs(fv2aVelocities[indexAPosX]);
+        }
 
-            let vDif = JVec.vSub(JVec.vCopy(objBall1.vPos), objBall2.vPos);
-            let fDist = JVec.fCalcMagnitude(vDif);
+        if(fv2aPositions[indexAPosY] < 0) {
+            fv2aVelocities[indexAPosY] = Math.abs(fv2aVelocities[indexAPosY]);
+        } else if (fv2aPositions[indexAPosY] > canvas.height) {
+            fv2aVelocities[indexAPosY] = -Math.abs(fv2aVelocities[indexAPosY]);
+        }
+
+        for(let indexB = indexA + 1; indexB < iNumParts; indexB++) {
+
+            let indexBPosX = indexB * iPosVecSize;
+            let indexBPosY = indexB * iPosVecSize + 1;
+            let indexBVelX = indexB * iVelVecSize;
+            let indexBVelY = indexB * iVelVecSize + 1;
+
+            let fPosDifX = fv2aPositions[indexAPosX] - fv2aPositions[indexBPosX];
+            let fPosDifY = fv2aPositions[indexAPosY] - fv2aPositions[indexBPosY];
+
+            let fDist = Math.sqrt(fPosDifX * fPosDifX + fPosDifY * fPosDifY);
 
             /** on collision **/
-            if(fDist < objBall1.fRadius + objBall2.fRadius) {
-
-                // collision impulse
-                const vVelDif = JVec.vSub(JVec.vCopy(objBall1.vVel), objBall2.vVel);
-
-                const vNorm = JVec.vNormalize(JVec.vCopy(vDif));
-
-                const fDotVel = JVec.fCalcDot(vNorm, vVelDif);
-
-                JVec.vAdd(objBall1.vVel, JVec.vScale(JVec.vCopy(vNorm), -fDotVel));
-                JVec.vAdd(objBall2.vVel, JVec.vScale(JVec.vCopy(vNorm), fDotVel));
-
-                // prevent stick by moving touching particles out of each other
-                const fOverlap = (fDist - (objBall1.fRadius + objBall2.fRadius)) / 2;
-                const vDisplace = JVec.vScale(vNorm, fOverlap);
-
-                JVec.vSub(objBall1.vPos, vDisplace);
-                JVec.vAdd(objBall2.vPos, vDisplace);
-
-                fPositions[i * 2] = objBall1.vPos[0];
-                fPositions[i * 2 + 1] = objBall1.vPos[1];
-
-                fPositions[j * 2] = objBall2.vPos[0];
-                fPositions[j * 2 + 1] = objBall2.vPos[1];
-            }
+            // if(fDist < faRadii[indexA] + faRadii[indexB]) {
+            //
+            //     const fVelDifX = fv2aVelocities[indexAVelX] - fv2aVelocities[indexBVelX];
+            //     const fVelDifY = fv2aVelocities[indexAVelY] - fv2aVelocities[indexBVelY];
+            //
+            //     //const vVelDif = JVec.vSubFromA(JVec.vCreate(fv2aVelocities, indexA, 2), 0, fv2aVelocities, indexB);
+            //
+            //     const fNormX = fPosDifX / fDist;
+            //     const fNormY = fPosDifY / fDist;
+            //
+            //     const fDotVel = fNormX * fVelDifX + fNormY * fVelDifY;
+            //
+            //     //const fDotVel = JVec.fCalcDot(vNorm, vVelDif);
+            //
+            //     fv2aVelocities[indexAVelX] += fNormX * -fDotVel;
+            //     fv2aVelocities[indexAVelY] += fNormY * -fDotVel;
+            //
+            //     fv2aVelocities[indexBVelX] += fNormX * fDotVel;
+            //     fv2aVelocities[indexBVelY] += fNormY * fDotVel;
+            //
+            //     // JVec.vAddToA(fv2aVelocities, indexA, JVec.vScale(JVec.vCopy(vNorm), -fDotVel), 0, 2);
+            //     // JVec.vAddToA(fv2aVelocities, indexB, JVec.vScale(JVec.vCopy(vNorm), fDotVel), 0, 2);
+            //
+            //     // JVec.vAddToA(objBall1.vVel, JVec.vScale(JVec.vCopy(vNorm), -fDotVel));
+            //     // JVec.vAddToA(objBall2.vVel, JVec.vScale(JVec.vCopy(vNorm), fDotVel));
+            //
+            //     // prevent stick by moving touching particles out of each other
+            //     const fOverlap = (fDist - (faRadii[indexA] + faRadii[indexB])) / 2;
+            //     let fDisplaceX = fNormX * fOverlap;
+            //     let fDisplaceY = fNormY * fOverlap;
+            //
+            //     fv2aPositions[indexAPosX] -= fDisplaceX;
+            //     fv2aPositions[indexAPosY] -= fDisplaceY;
+            //
+            //     fv2aPositions[indexBPosX] += fDisplaceX;
+            //     fv2aPositions[indexBPosY] += fDisplaceY;
+            // }
         }
     }
 
-    //console.log(fPositions);
+    console.log(fv2aPositions);
 
-    gl.uniform2fv(locPos, fPositions);
+    gl.uniform2fv(idPartPos, fv2aPositions);
 
     gl.drawArrays(gl.TRIANGLE_FAN, 0, 3);
 
@@ -111,19 +144,8 @@ function update() {
 }
 
 // add new cat
-new ObjBall(new ObjEmotion(1, 1, 1, 1, 1));
-new ObjBall(new ObjEmotion(1, 1, 1, 1, 1));
-new ObjBall(new ObjEmotion(1, 1, 1, 1, 1));
-new ObjBall(new ObjEmotion(1, 1, 1, 1, 1));
-new ObjBall(new ObjEmotion(1, 1, 1, 1, 1));
-new ObjBall(new ObjEmotion(1, 1, 1, 1, 1));
-new ObjBall(new ObjEmotion(1, 1, 1, 1, 1));
-new ObjBall(new ObjEmotion(1, 1, 1, 1, 1));
-new ObjBall(new ObjEmotion(1, 1, 1, 1, 1));
-new ObjBall(new ObjEmotion(1, 1, 1, 1, 1));
-new ObjBall(new ObjEmotion(1, 1, 1, 1, 1));
-new ObjBall(new ObjEmotion(1, 1, 1, 1, 1));
-new ObjBall(new ObjEmotion(1, 1, 1, 1, 1));
-new ObjBall(new ObjEmotion(1, 1, 1, 1, 1));
-new ObjBall(new ObjEmotion(1, 1, 1, 1, 1));
+
+// for(let i = 0; i < 10; i++) {
+//     new ObjBall(new ObjEmotion(1, 1, 1, 1, 1));
+// }
 
