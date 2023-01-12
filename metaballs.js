@@ -15,46 +15,54 @@ gl.uniform1f(idCanvHeight, canvas.height);
 
 const idPartPos = gl.getUniformLocation(program, "partPos");
 const idNumParts = gl.getUniformLocation(program, "numParts");
+const idColors = gl.getUniformLocation(program, "colors");
 
-gl.uniform1i(idNumParts, 0);
+gl.uniform1ui(idNumParts, 0);
 
 /*** Ball object ***/
 const fPartInitVel = 5;
 
 const iPosVecSize = 2;
-let fv2aPositions = [];
+let f2vPositions = [];
 const iVelVecSize = 2;
-let fv2aVelocities = [];
-let faRadii = [];
+let f2vVelocities = [];
+let f1vRadii = [];
+
+const iColorVecSize = 3;
+let f3vColors = [];
 
 let iNumParts = 0;
 
-function createParticle() {
+function createParticle(fr, fg, fb) {
 
     iNumParts++;
 
-    gl.uniform1i(idNumParts, iNumParts);
+    gl.uniform1ui(idNumParts, iNumParts);
 
     // x
-    fv2aPositions.push(Math.random() * canvas.width);
+    f2vPositions.push(Math.random() * canvas.width);
     // y
-    fv2aPositions.push(Math.random() * canvas.height);
+    f2vPositions.push(Math.random() * canvas.height);
 
     // random initial direction
     const fRandRad = Math.random() * Math.PI * 2;
 
     // x velocity
-    fv2aVelocities.push(Math.cos(fRandRad) * fPartInitVel);
+    f2vVelocities.push(Math.cos(fRandRad) * fPartInitVel);
     // y vel
-    fv2aVelocities.push(Math.sin(fRandRad) * fPartInitVel);
+    f2vVelocities.push(Math.sin(fRandRad) * fPartInitVel);
+
+    // color r, g, & b
+    f3vColors.push(fr);
+    f3vColors.push(fg);
+    f3vColors.push(fb);
+
+    gl.uniform3fv(idColors, f3vColors);
 
     // radius
-    faRadii.push(50);
+    f1vRadii.push(50);
 }
 
-for(let i = 0; i < 30; i++) {
-    createParticle();
-}
 
 window.requestAnimationFrame(update);
 function update() {
@@ -66,19 +74,19 @@ function update() {
         let indexAVelX = indexA * iVelVecSize;
         let indexAVelY = indexA * iVelVecSize + 1;
 
-        fv2aPositions[indexAPosX] += fv2aVelocities[indexAVelX];
-        fv2aPositions[indexAPosY] += fv2aVelocities[indexAVelY];
+        f2vPositions[indexAPosX] += f2vVelocities[indexAVelX];
+        f2vPositions[indexAPosY] += f2vVelocities[indexAVelY];
 
-        if(fv2aPositions[indexAPosX] < 0) {
-            fv2aVelocities[indexAPosX] = Math.abs(fv2aVelocities[indexAPosX]);
-        } else if (fv2aPositions[indexAPosX] > canvas.width) {
-            fv2aVelocities[indexAPosX] = -Math.abs(fv2aVelocities[indexAPosX]);
+        if(f2vPositions[indexAPosX] < 0) {
+            f2vVelocities[indexAPosX] = Math.abs(f2vVelocities[indexAPosX]);
+        } else if (f2vPositions[indexAPosX] > canvas.width) {
+            f2vVelocities[indexAPosX] = -Math.abs(f2vVelocities[indexAPosX]);
         }
 
-        if(fv2aPositions[indexAPosY] < 0) {
-            fv2aVelocities[indexAPosY] = Math.abs(fv2aVelocities[indexAPosY]);
-        } else if (fv2aPositions[indexAPosY] > canvas.height) {
-            fv2aVelocities[indexAPosY] = -Math.abs(fv2aVelocities[indexAPosY]);
+        if(f2vPositions[indexAPosY] < 0) {
+            f2vVelocities[indexAPosY] = Math.abs(f2vVelocities[indexAPosY]);
+        } else if (f2vPositions[indexAPosY] > canvas.height) {
+            f2vVelocities[indexAPosY] = -Math.abs(f2vVelocities[indexAPosY]);
         }
 
         for(let indexB = indexA + 1; indexB < iNumParts; indexB++) {
@@ -88,55 +96,53 @@ function update() {
             let indexBVelX = indexB * iVelVecSize;
             let indexBVelY = indexB * iVelVecSize + 1;
 
-            let fPosDifX = fv2aPositions[indexAPosX] - fv2aPositions[indexBPosX];
-            let fPosDifY = fv2aPositions[indexAPosY] - fv2aPositions[indexBPosY];
+            let fPosDifX = f2vPositions[indexAPosX] - f2vPositions[indexBPosX];
+            let fPosDifY = f2vPositions[indexAPosY] - f2vPositions[indexBPosY];
 
             let fDist = Math.sqrt(fPosDifX * fPosDifX + fPosDifY * fPosDifY);
 
             /** on collision **/
-            // if(fDist < faRadii[indexA] + faRadii[indexB]) {
-            //
-            //     const fVelDifX = fv2aVelocities[indexAVelX] - fv2aVelocities[indexBVelX];
-            //     const fVelDifY = fv2aVelocities[indexAVelY] - fv2aVelocities[indexBVelY];
-            //
-            //     //const vVelDif = JVec.vSubFromA(JVec.vCreate(fv2aVelocities, indexA, 2), 0, fv2aVelocities, indexB);
-            //
-            //     const fNormX = fPosDifX / fDist;
-            //     const fNormY = fPosDifY / fDist;
-            //
-            //     const fDotVel = fNormX * fVelDifX + fNormY * fVelDifY;
-            //
-            //     //const fDotVel = JVec.fCalcDot(vNorm, vVelDif);
-            //
-            //     fv2aVelocities[indexAVelX] += fNormX * -fDotVel;
-            //     fv2aVelocities[indexAVelY] += fNormY * -fDotVel;
-            //
-            //     fv2aVelocities[indexBVelX] += fNormX * fDotVel;
-            //     fv2aVelocities[indexBVelY] += fNormY * fDotVel;
-            //
-            //     // JVec.vAddToA(fv2aVelocities, indexA, JVec.vScale(JVec.vCopy(vNorm), -fDotVel), 0, 2);
-            //     // JVec.vAddToA(fv2aVelocities, indexB, JVec.vScale(JVec.vCopy(vNorm), fDotVel), 0, 2);
-            //
-            //     // JVec.vAddToA(objBall1.vVel, JVec.vScale(JVec.vCopy(vNorm), -fDotVel));
-            //     // JVec.vAddToA(objBall2.vVel, JVec.vScale(JVec.vCopy(vNorm), fDotVel));
-            //
-            //     // prevent stick by moving touching particles out of each other
-            //     const fOverlap = (fDist - (faRadii[indexA] + faRadii[indexB])) / 2;
-            //     let fDisplaceX = fNormX * fOverlap;
-            //     let fDisplaceY = fNormY * fOverlap;
-            //
-            //     fv2aPositions[indexAPosX] -= fDisplaceX;
-            //     fv2aPositions[indexAPosY] -= fDisplaceY;
-            //
-            //     fv2aPositions[indexBPosX] += fDisplaceX;
-            //     fv2aPositions[indexBPosY] += fDisplaceY;
-            // }
+            if(fDist < f1vRadii[indexA] + f1vRadii[indexB]) {
+
+                const fVelDifX = f2vVelocities[indexAVelX] - f2vVelocities[indexBVelX];
+                const fVelDifY = f2vVelocities[indexAVelY] - f2vVelocities[indexBVelY];
+
+                //const vVelDif = JVec.vSubFromA(JVec.vCreate(f2vVelocities, indexA, 2), 0, f2vVelocities, indexB);
+
+                const fNormX = fPosDifX / fDist;
+                const fNormY = fPosDifY / fDist;
+
+                const fDotVel = fNormX * fVelDifX + fNormY * fVelDifY;
+
+                //const fDotVel = JVec.fCalcDot(vNorm, vVelDif);
+
+                f2vVelocities[indexAVelX] += fNormX * -fDotVel;
+                f2vVelocities[indexAVelY] += fNormY * -fDotVel;
+
+                f2vVelocities[indexBVelX] += fNormX * fDotVel;
+                f2vVelocities[indexBVelY] += fNormY * fDotVel;
+
+                // JVec.vAddToA(f2vVelocities, indexA, JVec.vScale(JVec.vCopy(vNorm), -fDotVel), 0, 2);
+                // JVec.vAddToA(f2vVelocities, indexB, JVec.vScale(JVec.vCopy(vNorm), fDotVel), 0, 2);
+
+                // JVec.vAddToA(objBall1.vVel, JVec.vScale(JVec.vCopy(vNorm), -fDotVel));
+                // JVec.vAddToA(objBall2.vVel, JVec.vScale(JVec.vCopy(vNorm), fDotVel));
+
+                // prevent stick by moving touching particles out of each other
+                const fOverlap = (fDist - (f1vRadii[indexA] + f1vRadii[indexB])) / 2;
+                let fDisplaceX = fNormX * fOverlap;
+                let fDisplaceY = fNormY * fOverlap;
+
+                f2vPositions[indexAPosX] -= fDisplaceX;
+                f2vPositions[indexAPosY] -= fDisplaceY;
+
+                f2vPositions[indexBPosX] += fDisplaceX;
+                f2vPositions[indexBPosY] += fDisplaceY;
+            }
         }
     }
 
-    console.log(fv2aPositions);
-
-    gl.uniform2fv(idPartPos, fv2aPositions);
+    gl.uniform2fv(idPartPos, f2vPositions);
 
     gl.drawArrays(gl.TRIANGLE_FAN, 0, 3);
 

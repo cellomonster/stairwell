@@ -1,27 +1,37 @@
 #version 300 es
 
-precision highp float;
+precision lowp float;
 
 uniform vec2[500] partPos;
-uniform int numParts;
+uniform vec3[500] colors;
+uniform uint numParts;
 
 in vec2 texCoord;
 
 out vec4 fragColor;
 
 void main(void) {
-    fragColor = vec4(0, 1, 0, 1);
-    float f = 0.;
-    for(int i = 0; i < numParts; i++)
+    float f = 0.0;
+    uint iClosest = 0u;
+    float fClosest = 999999.0;
+    fragColor = vec4(0, 0, 0, 1);
+    for(uint i = 0u; i < numParts; i++)
     {
         vec2 p = partPos[i];
 
         float dx = texCoord.x - partPos[i].x;
         float dy = texCoord.y - partPos[i].y;
 
-        f += 50.0 * 50.0 / (dx * dx + dy * dy);
+        float d = dx * dx + dy * dy;
+
+        if(d < fClosest) {
+            fClosest = d;
+            iClosest = i;
+        }
+
+        f += 50.0 * 50.0 / d;
     }
 
-
-    fragColor = vec4(f > 1.0, f, f, 1);
+    if(f > 0.3)
+        fragColor = vec4(colors[iClosest], 1);
 }
