@@ -24,6 +24,12 @@ function createProgram(vertSrc, fragSrc) {
     gl.attachShader(program, glCreateShader(fragSrc, gl.FRAGMENT_SHADER));
     gl.linkProgram(program);
 
+    // add this for extra debugging
+    if ( !gl.getProgramParameter( program, gl.LINK_STATUS) ) {
+        var info = gl.getProgramInfoLog(program);
+        throw new Error('Could not compile WebGL program. \n\n' + info);
+    }
+
     return program;
 }
 

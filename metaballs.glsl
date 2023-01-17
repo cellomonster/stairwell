@@ -2,8 +2,9 @@
 
 precision lowp float;
 
-uniform vec2[500] partPos;
-uniform vec3[500] colors;
+uniform vec2[256] partPos;
+uniform vec3[256] colors;
+uniform float radii[256];
 uniform uint numParts;
 
 in vec2 texCoord;
@@ -19,6 +20,8 @@ void main(void) {
     {
         vec2 p = partPos[i];
 
+        float rad = radii[i];
+
         float dx = texCoord.x - partPos[i].x;
         float dy = texCoord.y - partPos[i].y;
 
@@ -29,7 +32,7 @@ void main(void) {
             iClosest = i;
         }
 
-        f += 50.0 * 50.0 / d;
+        f += rad * rad / d;
     }
 
     if(f > 0.3)
